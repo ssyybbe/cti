@@ -8,10 +8,10 @@ window.addEventListener("VCUCCoreLoadDone", () => {
 
 
     Vocalcom.UCCore.addHandler("OnSearchForCaller", function(phoneNumber) {
-        console.log("OnSearchForCaller begin");
+        console.log("OnSearchForCaller begin : ");
         console.log(phoneNumber);
         console.log(phoneNumber.E164);
-        console.log("OnSearchForCaller end");
+        console.log("OnSearchForCaller end : ");
     });
 });
  
