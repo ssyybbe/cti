@@ -10,7 +10,7 @@ window.addEventListener("VCUCCoreLoadDone", () => {
     });
 
     // 2. Résultats prêts → ouvrir la fiche si un seul résultat
-    Vocalcom.UCCore.addHandler("OnCallerSearchResult", function(results) {
+/*    Vocalcom.UCCore.addHandler("OnCallerSearchResult", function(results) {
         console.log("bbbb");
         console.log(results);
         if (results.length === 1) {
@@ -33,5 +33,5 @@ window.addEventListener("VCUCCoreLoadDone", () => {
         console.log("cccccc");
         //saveDispositionInCreatio(callStatusData);
     });
-
+*/
 });
