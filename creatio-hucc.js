@@ -1,4 +1,5 @@
 (function () {
+    console.log("hello1");
     var Memo = "";
     var Tel = "";
     var associateData = "";
@@ -61,7 +62,7 @@
         ///We need to define contact/account/lead id
         //We need to define caller
 
-
+        console.log("hello2");
         let data = {
             "createdby_phonecall@odata.bind": "",
             "subject": "",
@@ -265,6 +266,7 @@
      * @param {*} data 
      */
     var updatePhoneCall = function (data) {
+        console.log("hello3");
         if (!Vocalcom.UCCore.isMaster()) {
             console.debug("[MSDynamicsCRM] Not Master can't update a phone call");
             return;
@@ -534,6 +536,7 @@
      * @returns {Promise<object>}
      */
     var getPhoneCalls = function () {
+        console.log("hello4");
         const userid = localStorage.USERID;
         return Microsoft.CIFramework.searchAndOpenRecords("phonecall", `?$select=phonenumber,directioncode,huuc_hermes_call_starttime,huuc_hermes_call_stoptime,_regardingobjectid_value&$filter=_createdby_value eq '${userid}'&$orderby=actualend desc&$top=20`, true);
     };
@@ -542,6 +545,7 @@
         return new Promise((resolve, reject) => {
             getPhoneCalls().then(
                 function success(result) {
+                    console.log("hello5");
                     res = JSON.parse(result);
                     console.debug("[MSDynamicsCRM] calls", Object.entries(res));
                     var calls = [];
@@ -571,6 +575,7 @@
     };
 
     var searchCaller = function (caller) {
+        console.log("hello6");
         if (!searchingCaller) {
             var context = Vocalcom.UCCore.getGlobalContext()
             if (context.callInfo.objectFromHistory) {
@@ -669,6 +674,7 @@
          * 
          */
     Vocalcom.UCCore.addHandler("OnSetCallDisposition", function (callStatusData) {
+        console.log("hello8");
         var context = Vocalcom.UCCore.getGlobalContext();
         console.debug("[MSDynamicsCRM] setCallDisposition executed.", callStatusData);
         var session = context.callInfo;
@@ -707,6 +713,7 @@
 
 
     Vocalcom.UCCore.addHandler("OnSearchForCaller", function (phoneNumber) {
+        console.log("hello9");
         console.log("UCCore search for caller National Number", phoneNumber.National);
         console.log("UCCore search for caller International Number", phoneNumber.E164);
         searchCaller(phoneNumber);
@@ -743,6 +750,7 @@
      * event when call start
      */
     Vocalcom.UCCore.addHandler("OnCallOnline", function () {
+        console.log("hello10");
         var context = Vocalcom.UCCore.getGlobalContext();
         console.debug("[MSDynamicsCRM] OnCallOnline");
         CRMPhoneCallId = localStorage.getItem('phoneCallId');
@@ -756,6 +764,7 @@
 
 
     Vocalcom.UCCore.addHandler("OnCallFree", function () {
+        console.log("hello11");
         // set call phone object field
         console.debug("[MSDynamicsCRM] Ending voice call");
 
@@ -773,6 +782,7 @@
 
 
     Vocalcom.UCCore.addHandler("OnAttachCRMObjectToCall", function (objectId) {
+        console.log("hello12");
         var context = Vocalcom.UCCore.getGlobalContext();
         var id = objectId;
         let caller = context.callInfo.searchCallerResult.find(obj => { return obj.objectId === id });
