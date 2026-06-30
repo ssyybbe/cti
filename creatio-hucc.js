@@ -44,7 +44,7 @@
     }
     ]);
 
-    /*var panel_width = 400;
+    var panel_width = 400;
     Microsoft.CIFramework.getWidth().then(
         (width) => {
             if (width < panel_width) {
@@ -55,7 +55,7 @@
             Microsoft.CIFramework.setWidth(panel_width);
             console.error(error);
         }
-    );*/
+    );
 
     var PhoneCallData = function () {
         ///We need to define contact/account/lead id
@@ -848,5 +848,20 @@
             Vocalcom.UCCore.emitCallerSearchResult([]);
         }
     });
+
+
+    // Vocalcom.UCCore.getListContact = function () {
+    // return new Promise((resolve, reject) => {
+    // var listContact = [];		
+    // listContact["group 1"] = [
+    // {
+    // Name: "Agent name",
+    // Phone: "0155373054",
+    // Email: "agent@vocalcom.com"
+    // }
+    // ];     
+    // resolve(listContact);
+    // });
+    // };
 
 })();
