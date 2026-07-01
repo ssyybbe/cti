@@ -35,6 +35,7 @@ function creatioHeaders(includeCSRF) {
 // 1. LOGIN CREATIO
 // ============================================================
 function loginCreatio() {
+    console.log("try connect loginCreatio");
     return fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -59,12 +60,16 @@ function loginCreatio() {
         console.error("CREATIO : erreur login (probablement CORS)", err);
         return false;
     });
+    console.log("try connect loginCreatio end");
 }
 
 // ============================================================
 // 2. CHERCHER UN CONTACT PAR NUMÉRO DE TÉLÉPHONE
 // ============================================================
 function searchContactByPhone(phoneNumber) {
+    console.log("CREATIO : recherche contact pour", phoneNumber);
+
+
     // On nettoie le numéro : on cherche avec et sans +33
     var phoneClean = phoneNumber.replace(/\s/g, "");
     var phoneLocal = phoneClean.replace(/^\+33/, "0");
@@ -78,7 +83,6 @@ function searchContactByPhone(phoneNumber) {
 
     var url = CREATIO_BASE_URL + "/0/odata/Contact?$select=Id,Name,Phone,MobilePhone&$filter=" + filter;
 
-    console.log("CREATIO : recherche contact pour", phoneNumber);
 
     return fetch(url, {
         method: "GET",
