@@ -9,6 +9,31 @@ var CREATIO_PASSWORD = "ProcessFirst1*";   // ← à remplacer
 // Token CSRF Creatio (rempli après login)
 var bpmcsrfToken = null;
 
+// ============================================================
+// UTILITAIRE : lire un cookie par son nom
+// ============================================================
+function getCookie(name) {
+    var match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+    return match ? match[2] : null;
+}
+
+// ============================================================
+// UTILITAIRE : construire les headers pour les requêtes Creatio
+// ============================================================
+function creatioHeaders(includeCSRF) {
+    var headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    };
+    if (includeCSRF && bpmcsrfToken) {
+        headers["BPMCSRF"] = bpmcsrfToken;
+    }
+    return headers;
+}
+
+// ============================================================
+// 1. LOGIN CREATIO
+// ============================================================
 function loginCreatio() {
     console.log("CREATIO-HUCC : try connect loginCreatio");
     return fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
@@ -38,59 +63,6 @@ function loginCreatio() {
         console.error("CREATIO : erreur login", err);
         return false;
     });
-}
-// ============================================================
-// UTILITAIRE : lire un cookie par son nom
-// ============================================================
-function getCookie(name) {
-    var match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-    return match ? match[2] : null;
-}
-
-// ============================================================
-// UTILITAIRE : construire les headers pour les requêtes Creatio
-// ============================================================
-function creatioHeaders(includeCSRF) {
-    var headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    };
-    if (includeCSRF && bpmcsrfToken) {
-        headers["BPMCSRF"] = bpmcsrfToken;
-    }
-    return headers;
-}
-
-// ============================================================
-// 1. LOGIN CREATIO
-// ============================================================
-function loginCreatio() {
-    console.log("CREATIO-HUCC try connect loginCreatio");
-    return fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-            UserName: CREATIO_LOGIN,
-            UserPassword: CREATIO_PASSWORD
-        })
-    })
-    .then(function(res) {
-        if (res.ok) {
-            // Récupérer le token CSRF depuis les cookies
-            bpmcsrfToken = getCookie("BPMCSRF");
-            console.log("CREATIO-HUCC : login OK, BPMCSRF =", bpmcsrfToken);
-            return true;
-        } else {
-            console.error("CREATIO-HUCC : login échoué", res.status);
-            return false;
-        }
-    })
-    .catch(function(err) {
-        console.error("CREATIO : erreur login (probablement CORS)", err);
-        return false;
-    });
-    console.log("CREATIO-HUCC try connect loginCreatio end");
 }
 
 // ============================================================
