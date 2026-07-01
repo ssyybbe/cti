@@ -177,6 +177,7 @@ function initHUCC() {
 
     // Login Creatio au démarrage
     loginCreatio();
+    console.log("CREATIO-HUCC : After LOGIN");
 
     // ── Appel entrant : chercher le contact ──────────────────
     Vocalcom.UCCore.addHandler("OnSearchForCaller", function(phoneNumber) {
