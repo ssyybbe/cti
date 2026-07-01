@@ -153,7 +153,7 @@ function createCallActivity(callerNumber, contactId) {
 // ============================================================
 function openContactInCreatio(objectId, objectType) {
     // On ouvre directement sur Creatio (pas via le proxy)
-    var url = "https://nds-pf1-demo.creatio.com/0/Nui/ViewModule.aspx#" + objectType + "/edit/" + objectId;
+    var url = "https://dev-westlakeplastics.creatio.com/0/Nui/ViewModule.aspx#" + objectType + "/edit/" + objectId;
     console.log("CREATIO : ouverture fiche →", url);
     window.open(url, "_blank");
 }
