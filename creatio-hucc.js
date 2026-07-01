@@ -711,6 +711,16 @@
         updatePhoneCall(data);
     });
 
+    Vocalcom.UCCore.addHandler("OnAgentLogin", function (phoneNumber) {
+        console.log("aaaa");
+        searchCaller(phoneNumber);
+    });
+    Vocalcom.UCCore.addHandler("OnAgentReady", function (phoneNumber) {
+        console.log("bbbb");
+        searchCaller(phoneNumber);
+    });
+
+
 
     Vocalcom.UCCore.addHandler("OnSearchForCaller", function (phoneNumber) {
         console.log("hello9");
