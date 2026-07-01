@@ -1,5 +1,5 @@
 (function () {
-    console.log("hello1");
+    console.debug("hello1");
     var Memo = "";
     var Tel = "";
     var associateData = "";
@@ -62,7 +62,7 @@
         ///We need to define contact/account/lead id
         //We need to define caller
 
-        console.log("hello2");
+        console.debug("hello2");
         let data = {
             "createdby_phonecall@odata.bind": "",
             "subject": "",
@@ -199,7 +199,7 @@
             try {
                 let params = JSON.parse(paramStr);
                 var mode = currentDisplayMode = params["value"];
-                console.log("Mode changed to " + mode);
+                console.debug("Mode changed to " + mode);
                 //Get the new mode from the parameters passed by CIF and update our state accordingly
                 if (mode == DisplayMode.Docked) {
                     expandPanel();
@@ -225,7 +225,7 @@
     };
 
     function panelSizeChangedHandler(eventData) {
-        console.log("panelSizeChangedHandler", eventData);
+        console.debug("panelSizeChangedHandler", eventData);
         let jsEventData = JSON.parse(eventData);
         if (jsEventData.value < panel_width) {
             Microsoft.CIFramework.setWidth(panel_width);
@@ -246,7 +246,7 @@
             try {
                 let params = JSON.parse(paramStr);
                 var phNo = params.value;   //Retrieve the phone number to dial from parameters passed by CIF
-                console.log("[MSDynamicsCRM] Click To call!", params);
+                console.debug("[MSDynamicsCRM] Click To call!", params);
 
                 fromClicktoCall = true;
                 callers = [];
@@ -266,7 +266,7 @@
      * @param {*} data 
      */
     var updatePhoneCall = function (data) {
-        console.log("hello3");
+        console.debug("hello3");
         if (!Vocalcom.UCCore.isMaster()) {
             console.debug("[MSDynamicsCRM] Not Master can't update a phone call");
             return;
@@ -456,7 +456,7 @@
                 accountToCallers(tempAccounts);
                 leadToCallers(tempLeads);
             }
-            console.log("[MSDynamicsCRM] The caller are " + callers.length + " callers", callers);
+            console.debug("[MSDynamicsCRM] The caller are " + callers.length + " callers", callers);
             let entityType = getEntityProperties(callers[0]?.objectType)
             let searchField = entityType.searchField;
             let entityFields = entityType.entityFields;
@@ -482,7 +482,7 @@
             Vocalcom.UCCore.emitCallerSearchResult(callers);
         }
         catch (e) {
-            console.log("[MSDynamicsCRM] Unable to find caller name- Exception: " + e);
+            console.debug("[MSDynamicsCRM] Unable to find caller name- Exception: " + e);
         }
     };
 
@@ -490,13 +490,13 @@
     var createNewContact = function (caller) {
         var entityFormOptions = {};
         entityFormOptions["entityName"] = "contact";
-        console.log("Create a new contact with phone number " + caller);
+        console.debug("Create a new contact with phone number " + caller);
         Microsoft.CIFramework.openForm(JSON.stringify(entityFormOptions), JSON.stringify({ firstname: 'new', lastname: 'contact', mobilephone: caller })).then(
             function (success) {
-                console.log(success);
+                console.debug(success);
             },
             function (error) {
-                console.log(error);
+                console.debug(error);
             }
         );
     };
@@ -505,13 +505,13 @@
     var createNewAccount = function (caller) {
         var entityFormOptions = {};
         entityFormOptions["entityName"] = "account";
-        console.log("Create a new account with phone number " + caller);
+        console.debug("Create a new account with phone number " + caller);
         Microsoft.CIFramework.openForm(JSON.stringify(entityFormOptions), JSON.stringify({ telephone1: caller, name: 'new' })).then(
             function (success) {
-                console.log(success);
+                console.debug(success);
             },
             function (error) {
-                console.log(error);
+                console.debug(error);
             }
         );
     };
@@ -520,13 +520,13 @@
     var createNewLead = function (caller) {
         var entityFormOptions = {};
         entityFormOptions["entityName"] = "lead";
-        console.log("Create a new lead with phone number " + caller);
+        console.debug("Create a new lead with phone number " + caller);
         Microsoft.CIFramework.openForm(JSON.stringify(entityFormOptions), JSON.stringify({ telephone1: caller, name: 'new' })).then(
             function (success) {
-                console.log(success);
+                console.debug(success);
             },
             function (error) {
-                console.log(error);
+                console.debug(error);
             }
         );
     };
@@ -536,7 +536,7 @@
      * @returns {Promise<object>}
      */
     var getPhoneCalls = function () {
-        console.log("hello4");
+        console.debug("hello4");
         const userid = localStorage.USERID;
         return Microsoft.CIFramework.searchAndOpenRecords("phonecall", `?$select=phonenumber,directioncode,huuc_hermes_call_starttime,huuc_hermes_call_stoptime,_regardingobjectid_value&$filter=_createdby_value eq '${userid}'&$orderby=actualend desc&$top=20`, true);
     };
@@ -545,7 +545,7 @@
         return new Promise((resolve, reject) => {
             getPhoneCalls().then(
                 function success(result) {
-                    console.log("hello5");
+                    console.debug("hello5");
                     res = JSON.parse(result);
                     console.debug("[MSDynamicsCRM] calls", Object.entries(res));
                     var calls = [];
@@ -575,7 +575,7 @@
     };
 
     var searchCaller = function (caller) {
-        console.log("hello6");
+        console.debug("hello6");
         if (!searchingCaller) {
             var context = Vocalcom.UCCore.getGlobalContext()
             if (context.callInfo.objectFromHistory) {
@@ -632,7 +632,7 @@
                             searchingCaller = false;
                         }
                         catch (e) {
-                            console.log("[MSDynamicsCRM] Unable to find caller name- Exception: " + e);
+                            console.debug("[MSDynamicsCRM] Unable to find caller name- Exception: " + e);
                             searchingCaller = false;
                         }
                     }
@@ -641,7 +641,7 @@
                         reason = "[MSDynamicsCRM] Unknown Reason";
                     }
                     searchingCaller = false;
-                    console.log("[MSDynamicsCRM] Couldn't retrieve caller name because " + reason.toString());
+                    console.debug("[MSDynamicsCRM] Couldn't retrieve caller name because " + reason.toString());
                 });
             }
         }
@@ -674,7 +674,7 @@
          * 
          */
     Vocalcom.UCCore.addHandler("OnSetCallDisposition", function (callStatusData) {
-        console.log("hello8");
+        console.debug("hello8");
         var context = Vocalcom.UCCore.getGlobalContext();
         console.debug("[MSDynamicsCRM] setCallDisposition executed.", callStatusData);
         var session = context.callInfo;
@@ -712,20 +712,20 @@
     });
 
     Vocalcom.UCCore.addHandler("OnAgentLogin", function (phoneNumber) {
-        console.log("aaaa");
+        console.debug("aaaa");
         searchCaller(phoneNumber);
     });
     Vocalcom.UCCore.addHandler("OnAgentReady", function (phoneNumber) {
-        console.log("bbbb");
+        console.debug("bbbb");
         searchCaller(phoneNumber);
     });
 
 
 
     Vocalcom.UCCore.addHandler("OnSearchForCaller", function (phoneNumber) {
-        console.log("hello9");
-        console.log("UCCore search for caller National Number", phoneNumber.National);
-        console.log("UCCore search for caller International Number", phoneNumber.E164);
+        console.debug("hello9");
+        console.debug("UCCore search for caller National Number", phoneNumber.National);
+        console.debug("UCCore search for caller International Number", phoneNumber.E164);
         searchCaller(phoneNumber);
     });
 
@@ -760,7 +760,7 @@
      * event when call start
      */
     Vocalcom.UCCore.addHandler("OnCallOnline", function () {
-        console.log("hello10");
+        console.debug("hello10");
         var context = Vocalcom.UCCore.getGlobalContext();
         console.debug("[MSDynamicsCRM] OnCallOnline");
         CRMPhoneCallId = localStorage.getItem('phoneCallId');
@@ -774,7 +774,7 @@
 
 
     Vocalcom.UCCore.addHandler("OnCallFree", function () {
-        console.log("hello11");
+        console.debug("hello11");
         // set call phone object field
         console.debug("[MSDynamicsCRM] Ending voice call");
 
@@ -792,7 +792,7 @@
 
 
     Vocalcom.UCCore.addHandler("OnAttachCRMObjectToCall", function (objectId) {
-        console.log("hello12");
+        console.debug("hello12");
         var context = Vocalcom.UCCore.getGlobalContext();
         var id = objectId;
         let caller = context.callInfo.searchCallerResult.find(obj => { return obj.objectId === id });
