@@ -6,15 +6,20 @@ var CREATIO_BASE_URL = "https://hucc-proxy.onrender.com";
 var CREATIO_LOGIN    = "Administrator 1";      // ← à remplacer
 var CREATIO_PASSWORD = "ProcessFirst1*";   // ← à remplacer
 
+
 // Token CSRF Creatio (rempli après login)
 var bpmcsrfToken = null;
 
-// Contact identifié pendant l'appel en cours
-var currentCallContactId = null;
-var currentCallerNumber  = null;
+// ============================================================
+// UTILITAIRE : lire un cookie par son nom
+// ============================================================
+function getCookie(name) {
+    var match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+    return match ? match[2] : null;
+}
 
 // ============================================================
-// UTILITAIRE : headers pour les requêtes Creatio
+// UTILITAIRE : construire les headers pour les requêtes Creatio
 // ============================================================
 function creatioHeaders(includeCSRF) {
     var headers = {
@@ -31,7 +36,16 @@ function creatioHeaders(includeCSRF) {
 // 1. LOGIN CREATIO
 // ============================================================
 function loginCreatio() {
-    console.log("CREATIO-HUCC : try connect loginCreatio");
+    // Si déjà connecté à Creatio (cas iframe), le cookie est déjà là
+    bpmcsrfToken = getCookie("BPMCSRF") || getCookie("CRT_CSRF");
+    
+    if (bpmcsrfToken) {
+        console.log("CREATIO : session existante trouvée, BPMCSRF =", bpmcsrfToken);
+        return Promise.resolve(true);
+    }
+
+    // Sinon on fait un vrai login (cas onglet séparé)
+    console.log("CREATIO : pas de session, login en cours...");
     return fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -44,13 +58,12 @@ function loginCreatio() {
     .then(function(res) { return res.json(); })
     .then(function(data) {
         if (data.Code === 0) {
-            bpmcsrfToken = data.BPMCSRF;
+            bpmcsrfToken = getCookie("BPMCSRF") || getCookie("CRT_CSRF");
             console.log("CREATIO : login OK, BPMCSRF =", bpmcsrfToken);
             return true;
-        } else {
-            console.error("CREATIO : login échoué, code =", data.Code);
-            return false;
         }
+        console.error("CREATIO : login échoué", data.Code);
+        return false;
     })
     .catch(function(err) {
         console.error("CREATIO : erreur login", err);
@@ -59,33 +72,10 @@ function loginCreatio() {
 }
 
 // ============================================================
-// 2. FETCH AVEC RETRY AUTO SI 401
-// ============================================================
-function fetchWithRetry(url, options) {
-    return fetch(url, options)
-        .then(function(res) {
-            if (res.status === 401) {
-                console.log("CREATIO : session expirée (401), re-login en cours...");
-                return loginCreatio().then(function(ok) {
-                    if (ok) {
-                        // Mettre à jour le BPMCSRF dans les headers si nécessaire
-                        if (options.headers && options.headers["BPMCSRF"]) {
-                            options.headers["BPMCSRF"] = bpmcsrfToken;
-                        }
-                        console.log("CREATIO : re-login OK, rejoue la requête");
-                        return fetch(url, options);
-                    }
-                    return res;
-                });
-            }
-            return res;
-        });
-}
-
-// ============================================================
-// 3. CHERCHER UN CONTACT PAR NUMÉRO DE TÉLÉPHONE
+// 2. CHERCHER UN CONTACT PAR NUMÉRO DE TÉLÉPHONE
 // ============================================================
 function searchContactByPhone(phoneNumber) {
+    // On nettoie le numéro : on cherche avec et sans +33
     var phoneClean = phoneNumber.replace(/\s/g, "");
     var phoneLocal = phoneClean.replace(/^\+33/, "0");
 
@@ -97,11 +87,12 @@ function searchContactByPhone(phoneNumber) {
     );
 
     var url = CREATIO_BASE_URL + "/0/odata/Contact?$select=Id,Name,Phone,MobilePhone&$filter=" + filter;
+
     console.log("CREATIO : recherche contact pour", phoneNumber);
 
-    return fetchWithRetry(url, {
+    return fetch(url, {
         method: "GET",
-        headers: creatioHeaders(false),
+        headers: creatioHeaders(false), // GET : pas besoin du CSRF
         credentials: "include"
     })
     .then(function(res) {
@@ -115,6 +106,7 @@ function searchContactByPhone(phoneNumber) {
         var contacts = data.value || [];
         console.log("CREATIO : " + contacts.length + " contact(s) trouvé(s)", contacts);
 
+        // Convertir au format HUCC
         return contacts.map(function(c) {
             return {
                 objectId:    c.Id,
@@ -130,26 +122,25 @@ function searchContactByPhone(phoneNumber) {
 }
 
 // ============================================================
-// 4. CRÉER UNE ACTIVITÉ "APPEL" DANS CREATIO
+// 3. CRÉER UNE ACTIVITÉ "APPEL" DANS CREATIO
 // ============================================================
 function createCallActivity(callerNumber, contactId) {
     var data = {
         "Title": "Appel entrant - " + callerNumber,
-        "TypeId": "e1c59272-5001-4d72-8f62-a4dc6e91f345",
+        "TypeId": "e1c59272-5001-4d72-8f62-a4dc6e91f345", // GUID type "Appel" dans Creatio
         "PhoneNumber": callerNumber,
         "StartDate": new Date().toISOString(),
-        "StatusId": "384d4ef6-55d6-df11-971b-001d60e938c6"
+        "StatusId": "384d4ef6-55d6-df11-971b-001d60e938c6"  // Statut "Terminé"
     };
 
+    // Lier au contact si trouvé
     if (contactId) {
         data["ContactId"] = contactId;
     }
 
-    console.log("CREATIO : création activité →", data);
-
-    return fetchWithRetry(CREATIO_BASE_URL + "/0/odata/Activity", {
+    return fetch(CREATIO_BASE_URL + "/0/odata/Activity", {
         method: "POST",
-        headers: creatioHeaders(true),
+        headers: creatioHeaders(true), // POST : CSRF obligatoire
         credentials: "include",
         body: JSON.stringify(data)
     })
@@ -171,46 +162,27 @@ function createCallActivity(callerNumber, contactId) {
 }
 
 // ============================================================
-// 5. OUVRIR LA FICHE CONTACT DANS CREATIO (nouvel onglet)
+// 4. OUVRIR LA FICHE CONTACT DANS CREATIO (nouvel onglet)
 // ============================================================
 function openContactInCreatio(objectId, objectType) {
-    var url = "https://nds-pf1-demo.creatio.com/0/Nui/ViewModule.aspx#" + objectType + "/edit/" + objectId;
+    var url = CREATIO_BASE_URL + "/0/Nui/ViewModule.aspx#" + objectType + "/edit/" + objectId;
     console.log("CREATIO : ouverture fiche →", url);
     window.open(url, "_blank");
 }
 
 // ============================================================
-// 6. GARDER LE PROXY ÉVEILLÉ (ping toutes les 5 minutes)
+// 5. INITIALISATION DES HANDLERS HUCC
 // ============================================================
-function startPing() {
-    setInterval(function() {
-        fetch(CREATIO_BASE_URL + "/ping", { credentials: "include" })
-            .then(function(res) { return res.json(); })
-            .then(function(data) {
-                console.log("CREATIO : ping proxy →", data.status, "| session:", data.session);
-                // Si la session est perdue côté proxy, on se reconnecte
-                if (data.session === "NON") {
-                    console.log("CREATIO : session proxy perdue, re-login...");
-                    loginCreatio();
-                }
-            })
-            .catch(function() {
-                console.warn("CREATIO : proxy injoignable, tentative de re-login...");
-                loginCreatio();
-            });
-    }, 4 * 60 * 1000); // toutes les 4 minutes
-}
 
-// ============================================================
-// 7. HANDLERS HUCC
-// ============================================================
+// Stockage temporaire du contact identifié pendant l'appel
+var currentCallContactId = null;
+var currentCallerNumber  = null;
+
 function initHUCC() {
     console.log("CREATIO-HUCC : UCCore prêt, initialisation des handlers");
 
-    // Login au démarrage puis ping régulier
-    loginCreatio().then(function() {
-        startPing();
-    });
+    // Login Creatio au démarrage
+    loginCreatio();
 
     // ── Appel entrant : chercher le contact ──────────────────
     Vocalcom.UCCore.addHandler("OnSearchForCaller", function(phoneNumber) {
@@ -220,9 +192,10 @@ function initHUCC() {
 
         searchContactByPhone(phoneNumber.E164)
             .then(function(results) {
-                console.log("CREATIO-HUCC : résultats →", results);
+                console.log("CREATIO-HUCC : résultats envoyés à HUCC →", results);
                 Vocalcom.UCCore.emitCallerSearchResult(results);
 
+                // Si un seul contact trouvé : mémoriser et ouvrir sa fiche
                 if (results.length === 1) {
                     currentCallContactId = results[0].objectId;
                     openContactInCreatio(results[0].objectId, results[0].objectType);
@@ -242,7 +215,7 @@ function initHUCC() {
         console.log("CREATIO-HUCC : OnCallOnline → appel en cours");
     });
 
-    // ── Appel terminé : créer l'activité ─────────────────────
+    // ── Appel terminé : créer l'activité dans Creatio ────────
     Vocalcom.UCCore.addHandler("OnCallFree", function() {
         console.log("CREATIO-HUCC : OnCallFree → création activité");
         createCallActivity(currentCallerNumber, currentCallContactId);
@@ -250,7 +223,7 @@ function initHUCC() {
 }
 
 // ============================================================
-// 8. DÉMARRAGE
+// 6. DÉMARRAGE
 // ============================================================
 console.log("CREATIO-HUCC : fichier chargé");
 
