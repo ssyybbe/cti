@@ -35,7 +35,7 @@ function creatioHeaders(includeCSRF) {
 // 1. LOGIN CREATIO
 // ============================================================
 function loginCreatio() {
-    console.log("try connect loginCreatio");
+    console.log("CREATIO-HUCC try connect loginCreatio");
     return fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -49,10 +49,10 @@ function loginCreatio() {
         if (res.ok) {
             // Récupérer le token CSRF depuis les cookies
             bpmcsrfToken = getCookie("BPMCSRF");
-            console.log("CREATIO : login OK, BPMCSRF =", bpmcsrfToken);
+            console.log("CREATIO-HUCC : login OK, BPMCSRF =", bpmcsrfToken);
             return true;
         } else {
-            console.error("CREATIO : login échoué", res.status);
+            console.error("CREATIO-HUCC : login échoué", res.status);
             return false;
         }
     })
@@ -60,7 +60,7 @@ function loginCreatio() {
         console.error("CREATIO : erreur login (probablement CORS)", err);
         return false;
     });
-    console.log("try connect loginCreatio end");
+    console.log("CREATIO-HUCC try connect loginCreatio end");
 }
 
 // ============================================================
