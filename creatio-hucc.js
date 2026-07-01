@@ -9,23 +9,36 @@ var CREATIO_PASSWORD = "ProcessFirst1*";   // ← à remplacer
 // Token CSRF Creatio (rempli après login)
 var bpmcsrfToken = null;
 
-fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-        UserName: CREATIO_LOGIN,
-        UserPassword: CREATIO_PASSWORD
+function loginCreatio() {
+    console.log("CREATIO-HUCC : try connect loginCreatio");
+    return fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+            UserName: CREATIO_LOGIN,
+            UserPassword: CREATIO_PASSWORD
+        })
     })
-})
-.then(function(res) {
-    res.headers.forEach((val, key) => console.log("HEADER →", key, ":", val));
-    return res.json();
-})
-.then(function(data) {
-    console.log("BODY →", JSON.stringify(data));
-});
-
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.Code === 0) {
+            // Essayer BPMCSRF puis CRT_CSRF
+            bpmcsrfToken = getCookie("BPMCSRF") || getCookie("CRT_CSRF");
+            console.log("CREATIO : login OK");
+            console.log("CREATIO : tous les cookies →", document.cookie);
+            console.log("CREATIO : BPMCSRF →", bpmcsrfToken);
+            return true;
+        } else {
+            console.error("CREATIO : login échoué, code =", data.Code);
+            return false;
+        }
+    })
+    .catch(function(err) {
+        console.error("CREATIO : erreur login", err);
+        return false;
+    });
+}
 // ============================================================
 // UTILITAIRE : lire un cookie par son nom
 // ============================================================
