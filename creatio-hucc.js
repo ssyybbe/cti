@@ -9,6 +9,23 @@ var CREATIO_PASSWORD = "ProcessFirst1*";   // ← à remplacer
 // Token CSRF Creatio (rempli après login)
 var bpmcsrfToken = null;
 
+fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+        UserName: CREATIO_LOGIN,
+        UserPassword: CREATIO_PASSWORD
+    })
+})
+.then(function(res) {
+    res.headers.forEach((val, key) => console.log("HEADER →", key, ":", val));
+    return res.json();
+})
+.then(function(data) {
+    console.log("BODY →", JSON.stringify(data));
+});
+
 // ============================================================
 // UTILITAIRE : lire un cookie par son nom
 // ============================================================
