@@ -11,7 +11,7 @@
 // JS (fetch/XHR), donc aucun souci de CORS.
 // ============================================================
 
-var PROXY_BASE_URL   = "https://votre-proxy.example.com"; // ← URL de VOTRE serveur proxy
+var PROXY_BASE_URL   = "https://hucc-proxy-1.onrender.com";
 var CREATIO_BASE_URL = "https://stlia-demo.creatio.com";   // utilisé uniquement pour ouvrir les fiches
 
 // ============================================================
