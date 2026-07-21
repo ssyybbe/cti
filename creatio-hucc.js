@@ -1,169 +1,75 @@
 // ============================================================
-// HUCC → Creatio connector — version test
+// HUCC → Creatio connector — via proxy serveur (anti-CORS)
+// ============================================================
+// Ce script n'appelle plus jamais Creatio directement en GET/POST
+// (ce qui causait les erreurs CORS). Il passe par un petit serveur
+// proxy (voir dossier creatio-proxy/) qui, lui, parle à Creatio
+// en server-to-server.
+//
+// La seule interaction directe avec Creatio ici est window.open()
+// pour afficher la fiche contact — ce n'est pas un appel réseau
+// JS (fetch/XHR), donc aucun souci de CORS.
 // ============================================================
 
-var CREATIO_BASE_URL = "https://stlia-demo.creatio.com/";
-var CREATIO_LOGIN    = "Supervisor";      // ← à remplacer
-var CREATIO_PASSWORD = "ProcessFirst1*";   // ← à remplacer
-
-
-// Token CSRF Creatio (rempli après login)
-var bpmcsrfToken = null;
+var PROXY_BASE_URL   = "https://hucc-proxy-1.onrender.com"; // ← URL de VOTRE serveur proxy
+var CREATIO_BASE_URL = "https://stlia-demo.creatio.com";   // utilisé uniquement pour ouvrir les fiches
 
 // ============================================================
-// UTILITAIRE : lire un cookie par son nom
-// ============================================================
-function getCookie(name) {
-    var match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
-    return match ? match[2] : null;
-}
-
-// ============================================================
-// UTILITAIRE : construire les headers pour les requêtes Creatio
-// ============================================================
-function creatioHeaders(includeCSRF) {
-    var headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    };
-    if (includeCSRF && bpmcsrfToken) {
-        headers["BPMCSRF"] = bpmcsrfToken;
-    }
-    return headers;
-}
-
-// ============================================================
-// 1. LOGIN CREATIO
-// ============================================================
-function loginCreatio() {
-    // Si déjà connecté à Creatio (cas iframe), le cookie est déjà là
-    bpmcsrfToken = getCookie("BPMCSRF") || getCookie("CRT_CSRF");
-    
-    if (bpmcsrfToken) {
-        console.log("CREATIO : session existante trouvée, BPMCSRF =", bpmcsrfToken);
-        return Promise.resolve(true);
-    }
-
-    // Sinon on fait un vrai login (cas onglet séparé)
-    console.log("CREATIO : pas de session, login en cours...");
-    return fetch(CREATIO_BASE_URL + "/ServiceModel/AuthService.svc/Login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-            UserName: CREATIO_LOGIN,
-            UserPassword: CREATIO_PASSWORD
-        })
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-        if (data.Code === 0) {
-            bpmcsrfToken = getCookie("BPMCSRF") || getCookie("CRT_CSRF");
-            console.log("CREATIO : login OK, BPMCSRF =", bpmcsrfToken);
-            return true;
-        }
-        console.error("CREATIO : login échoué", data.Code);
-        return false;
-    })
-    .catch(function(err) {
-        console.error("CREATIO : erreur login", err);
-        return false;
-    });
-}
-
-// ============================================================
-// 2. CHERCHER UN CONTACT PAR NUMÉRO DE TÉLÉPHONE
+// 1. CHERCHER UN CONTACT PAR NUMÉRO DE TÉLÉPHONE (via proxy)
 // ============================================================
 function searchContactByPhone(phoneNumber) {
-    // On nettoie le numéro : on cherche avec et sans +33
-    var phoneClean = phoneNumber.replace(/\s/g, "");
-    var phoneLocal = phoneClean.replace(/^\+33/, "0");
-
-    var filter = encodeURIComponent(
-        "contains(Phone, '" + phoneClean + "')" +
-        " or contains(MobilePhone, '" + phoneClean + "')" +
-        " or contains(Phone, '" + phoneLocal + "')" +
-        " or contains(MobilePhone, '" + phoneLocal + "')"
-    );
-
-    var url = CREATIO_BASE_URL + "/0/odata/Contact?$select=Id,Name,Phone,MobilePhone&$filter=" + filter;
-
-    console.log("CREATIO : recherche contact pour", phoneNumber);
-
-    return fetch(url, {
-        method: "GET",
-        headers: creatioHeaders(false), // GET : pas besoin du CSRF
-        credentials: "include"
-    })
-    .then(function(res) {
-        if (!res.ok) {
-            console.error("CREATIO : erreur recherche", res.status);
+    var url = PROXY_BASE_URL + "/api/contacts/search?phone=" + encodeURIComponent(phoneNumber);
+    console.log("CREATIO-HUCC : recherche contact (via proxy) pour", phoneNumber);
+    return fetch(url, { method: "GET" })
+        .then(function(res) {
+            if (!res.ok) {
+                console.error("PROXY : erreur recherche", res.status);
+                return [];
+            }
+            return res.json();
+        })
+        .then(function(contacts) {
+            console.log("PROXY : " + contacts.length + " contact(s) trouvé(s)", contacts);
+            return contacts;
+        })
+        .catch(function(err) {
+            console.error("PROXY : erreur fetch recherche", err);
             return [];
-        }
-        return res.json();
-    })
-    .then(function(data) {
-        var contacts = data.value || [];
-        console.log("CREATIO : " + contacts.length + " contact(s) trouvé(s)", contacts);
-
-        // Convertir au format HUCC
-        return contacts.map(function(c) {
-            return {
-                objectId:    c.Id,
-                objectType:  "contact",
-                description: c.Name + " (" + (c.Phone || c.MobilePhone) + ")"
-            };
         });
-    })
-    .catch(function(err) {
-        console.error("CREATIO : erreur fetch recherche", err);
-        return [];
-    });
 }
 
 // ============================================================
-// 3. CRÉER UNE ACTIVITÉ "APPEL" DANS CREATIO
+// 2. CRÉER UNE ACTIVITÉ "APPEL" DANS CREATIO (via proxy)
 // ============================================================
 function createCallActivity(callerNumber, contactId) {
-    var data = {
-        "Title": "Appel entrant - " + callerNumber,
-        "TypeId": "e1c59272-5001-4d72-8f62-a4dc6e91f345", // GUID type "Appel" dans Creatio
-        "PhoneNumber": callerNumber,
-        "StartDate": new Date().toISOString(),
-        "StatusId": "384d4ef6-55d6-df11-971b-001d60e938c6"  // Statut "Terminé"
-    };
-
-    // Lier au contact si trouvé
-    if (contactId) {
-        data["ContactId"] = contactId;
-    }
-
-    return fetch(CREATIO_BASE_URL + "/0/odata/Activity", {
+    return fetch(PROXY_BASE_URL + "/api/activities", {
         method: "POST",
-        headers: creatioHeaders(true), // POST : CSRF obligatoire
-        credentials: "include",
-        body: JSON.stringify(data)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callerNumber: callerNumber, contactId: contactId })
     })
     .then(function(res) {
         if (res.ok) {
             return res.json().then(function(d) {
-                console.log("CREATIO : activité créée →", d.Id);
-                return d.Id;
+                console.log("PROXY : activité créée →", d.id);
+                return d.id;
             });
         } else {
-            console.error("CREATIO : erreur création activité", res.status);
+            console.error("PROXY : erreur création activité", res.status);
             return null;
         }
     })
     .catch(function(err) {
-        console.error("CREATIO : erreur fetch création activité", err);
+        console.error("PROXY : erreur fetch création activité", err);
         return null;
     });
 }
 
 // ============================================================
-// 4. OUVRIR LA FICHE CONTACT DANS CREATIO (nouvel onglet)
+// 3. OUVRIR LA FICHE CONTACT DANS CREATIO (nouvel onglet)
 // ============================================================
+// Pas d'appel réseau JS ici : c'est une simple navigation du
+// navigateur, donc pas de CORS. L'agent doit être connecté à
+// Creatio dans son propre onglet pour voir la fiche.
 function openContactInCreatio(objectId, objectType) {
     var url = CREATIO_BASE_URL + "/0/Nui/ViewModule.aspx#" + objectType + "/edit/" + objectId;
     console.log("CREATIO : ouverture fiche →", url);
@@ -171,18 +77,13 @@ function openContactInCreatio(objectId, objectType) {
 }
 
 // ============================================================
-// 5. INITIALISATION DES HANDLERS HUCC
+// 4. INITIALISATION DES HANDLERS HUCC
 // ============================================================
-
-// Stockage temporaire du contact identifié pendant l'appel
 var currentCallContactId = null;
 var currentCallerNumber  = null;
 
 function initHUCC() {
     console.log("CREATIO-HUCC : UCCore prêt, initialisation des handlers");
-
-    // Login Creatio au démarrage
-    loginCreatio();
 
     // ── Appel entrant : chercher le contact ──────────────────
     Vocalcom.UCCore.addHandler("OnSearchForCaller", function(phoneNumber) {
@@ -195,7 +96,6 @@ function initHUCC() {
                 console.log("CREATIO-HUCC : résultats envoyés à HUCC →", results);
                 Vocalcom.UCCore.emitCallerSearchResult(results);
 
-                // Si un seul contact trouvé : mémoriser et ouvrir sa fiche
                 if (results.length === 1) {
                     currentCallContactId = results[0].objectId;
                     openContactInCreatio(results[0].objectId, results[0].objectType);
@@ -223,10 +123,9 @@ function initHUCC() {
 }
 
 // ============================================================
-// 6. DÉMARRAGE
+// 5. DÉMARRAGE
 // ============================================================
 console.log("CREATIO-HUCC : fichier chargé");
-
 if (window.Vocalcom && window.Vocalcom.UCCore) {
     initHUCC();
 } else {
