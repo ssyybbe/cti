@@ -2,8 +2,8 @@
 // HUCC → Creatio connector — version test
 // ============================================================
 
-var CREATIO_BASE_URL = "https://nds-pf1-demo.creatio.com";
-var CREATIO_LOGIN    = "Administrator 1";      // ← à remplacer
+var CREATIO_BASE_URL = "https://stlia-demo.creatio.com/";
+var CREATIO_LOGIN    = "Supervisor";      // ← à remplacer
 var CREATIO_PASSWORD = "ProcessFirst1*";   // ← à remplacer
 
 
