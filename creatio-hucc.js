@@ -11,7 +11,7 @@
 // JS (fetch/XHR), donc aucun souci de CORS.
 // ============================================================
 
-var PROXY_BASE_URL   = "https://hucc-proxy-1.onrender.com"; // ← URL de VOTRE serveur proxy
+var PROXY_BASE_URL   = "https://votre-proxy.example.com"; // ← URL de VOTRE serveur proxy
 var CREATIO_BASE_URL = "https://stlia-demo.creatio.com";   // utilisé uniquement pour ouvrir les fiches
 
 // ============================================================
@@ -70,8 +70,18 @@ function createCallActivity(callerNumber, contactId) {
 // Pas d'appel réseau JS ici : c'est une simple navigation du
 // navigateur, donc pas de CORS. L'agent doit être connecté à
 // Creatio dans son propre onglet pour voir la fiche.
+// Correspondance entre le type d'objet (utilisé en interne par le widget)
+// et le nom de la page de fiche Creatio (Shell). À compléter si vous
+// ouvrez d'autres types d'objets (compte, opportunité, etc.).
+var CREATIO_FORM_PAGES = {
+    "contact": "Contacts_FormPage"
+    // "account": "Accounts_FormPage",
+    // "opportunity": "Opportunity_FormPage",
+};
+
 function openContactInCreatio(objectId, objectType) {
-    var url = CREATIO_BASE_URL + "/0/Nui/ViewModule.aspx#" + objectType + "/edit/" + objectId;
+    var formPage = CREATIO_FORM_PAGES[objectType] || CREATIO_FORM_PAGES["contact"];
+    var url = CREATIO_BASE_URL + "/0/Shell/#Card/" + formPage + "/edit/" + objectId;
     console.log("CREATIO : ouverture fiche →", url);
     window.open(url, "_blank");
 }
